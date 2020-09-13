@@ -11,13 +11,13 @@ const server = new ApolloServer({
   resolvers,
 });
 
-const PORT = 4444;
+const PORT = process.env.PORT;
 
 (async () => {
   try {
     await mongoose.connect(
       `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@graphql-basic.pmnob.gcp.mongodb.net/${process.env.DB_NAME}?retryWrites=true&w=majority`
-      // { useUnifiedTopology: true }
+      ,{ useUnifiedTopology: true }
     );
 
     const app = express();
