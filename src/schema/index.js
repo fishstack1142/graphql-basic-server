@@ -4,11 +4,32 @@ import User from "../models/user";
 import Product from "../models/product";
 import { GraphQLDateTime } from "graphql-iso-date";
 import CartItem from "../models/cartItem";
+import jwt from "jsonwebtoken";
 
 export const resolvers = {
   Query: {
-    //return data from database
-    user: (parent, args, context, info) => {
+    login: async (parent, args, context, info) => {
+      const { email, password } = args;
+
+      const user = await User.findOne({ email });
+
+      if (!user) throw new Error("Email not found, please sign up,");
+
+      const validPassword = await bcrypt.compare(password, user.password);
+
+      if (!validPassword) throw new Error("Invalid email or password.");
+
+      const token = jwt.sign({ userId: user.id }, process.env.SECRET, {
+        expiresIn: "7days",
+      });
+
+      return { userId: user.id, jwt: token };
+    },
+    user: (parent, args, { userId }, info) => {
+      if (!userId) throw new Error("Please log in");
+
+      if (userId !== args.id) throw new Error("Not authorized.");
+
       return User.findById(args.id)
         .populate({
           path: "createdProducts",
@@ -61,8 +82,9 @@ export const resolvers = {
 
       return User.create({ ...args, email, password });
     },
-    createProduct: async (parent, args, context, info) => {
-      const userId = "5f5d9f65aa7a733ccfd0009b";
+    createProduct: async (parent, args,  { userId }, info) => {
+
+      if (!userId) throw new Error('Please log in.')
 
       if (!args.description || !args.price || !args.imageUrl) {
         throw new Error("Please provide all required fields.");
@@ -87,10 +109,10 @@ export const resolvers = {
 
       return product;
     },
-    updateProduct: async (parent, args, context, info) => {
+    updateProduct: async (parent, args, { userId }, info) => {
       const { id, description, price, imageUrl } = args;
 
-      const userId = "5f5d9f65aa7a733ccfd0009b";
+      if(!userId) throw new Error('Please log in.')
 
       if (!userId) throw new Error("Please log in.");
 
@@ -116,10 +138,10 @@ export const resolvers = {
 
       // return updatedProduct;
     },
-    addToCart: async (parent, args, context, info) => {
+    addToCart: async (parent, args, { userId }, info) => {
       const { id } = args;
 
-      const userId = "5f5d9f65aa7a733ccfd0009b";
+      if (!userId) throw new Error('Please log in.')
 
       try {
         const user = await User.findById(userId).populate({
@@ -172,14 +194,14 @@ export const resolvers = {
         console.log(error);
       }
     },
-    deleteCart: async (parent, args, context, info) => {
+    deleteCart: async (parent, args,  { userId }, info) => {
       const { id } = args;
-
-      const userId = "5f5d9f65aa7a733ccfd0009b";
 
       if (!userId) throw new Error("Please log in.");
 
       const cart = await CartItem.findById(id);
+
+      console.log(cart)
 
       const user = await User.findById(userId);
 
@@ -204,7 +226,7 @@ export const resolvers = {
 
 export const typeDefs = gql`
   type Query {
-    login: User!
+    login(email: String!, password: String!): AuthData
     user(id: ID!): User!
     users: [User]!
     product(id: ID!): Product
@@ -255,5 +277,10 @@ export const typeDefs = gql`
     quantity: Int!
     user: User!
     createdAt: Date!
+  }
+
+  type AuthData {
+    userId: ID
+    jwt: String
   }
 `;
