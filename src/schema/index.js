@@ -12,7 +12,7 @@ export const resolvers = {
       return User.findById(args.id)
         .populate({
           path: "createdProducts",
-          populate: { path: "user" }
+          populate: { path: "user" },
         })
         .populate({ path: "carts", populate: { path: "product" } });
     },
@@ -62,7 +62,7 @@ export const resolvers = {
       return User.create({ ...args, email, password });
     },
     createProduct: async (parent, args, context, info) => {
-      const userId = "5f5d8f5a1ee46d394239b58f";
+      const userId = "5f5d9f65aa7a733ccfd0009b";
 
       if (!args.description || !args.price || !args.imageUrl) {
         throw new Error("Please provide all required fields.");
@@ -86,6 +86,35 @@ export const resolvers = {
       });
 
       return product;
+    },
+    updateProduct: async (parent, args, context, info) => {
+      const { id, description, price, imageUrl } = args;
+
+      const userId = "5f5d9f65aa7a733ccfd0009b";
+
+      if (!userId) throw new Error("Please log in.");
+
+      const product = await Product.findById(id);
+
+      if (userId !== product.user.toString()) {
+        throw new Error("You are not authorized.");
+      }
+
+      const updateInfo = {
+        description: !!description ? description : product.description,
+        price: !!price ? price : product.price,
+        imageUrl: !!imageUrl ? imageUrl : product.imageUrl,
+      };
+
+      //Update product in database
+      await Product.findByIdAndUpdate(id, updateInfo);
+
+      // Find the updated product
+      return await Product.findById(id).populate({
+        path: "user",
+      });
+
+      // return updatedProduct;
     },
     addToCart: async (parent, args, context, info) => {
       const { id } = args;
@@ -164,7 +193,14 @@ export const typeDefs = gql`
       price: Float!
       imageUrl: String!
     ): Product!
+    updateProduct(
+      id: ID!
+      description: String
+      price: Float
+      imageUrl: String
+    ): Product!
     addToCart(id: ID!): CartItem!
+    deleteCart(id: ID!): CartItem!
   }
 
   scalar Date
