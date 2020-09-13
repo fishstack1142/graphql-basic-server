@@ -119,7 +119,6 @@ export const resolvers = {
     addToCart: async (parent, args, context, info) => {
       const { id } = args;
 
-      console.log(args.id);
       const userId = "5f5d9f65aa7a733ccfd0009b";
 
       try {
@@ -173,13 +172,39 @@ export const resolvers = {
         console.log(error);
       }
     },
+    deleteCart: async (parent, args, context, info) => {
+      const { id } = args;
+
+      const userId = "5f5d9f65aa7a733ccfd0009b";
+
+      if (!userId) throw new Error("Please log in.");
+
+      const cart = await CartItem.findById(id);
+
+      const user = await User.findById(userId);
+
+      //Check ownership of the cart
+      if (cart.user.toString() !== userId) {
+        throw new Error("Not authorized.");
+      }
+
+      const deletedCart = await CartItem.findOneAndRemove(id);
+
+      const updatedUserCarts = user.carts.filter(
+        cartId => cartId.toString() !== deletedCart.id.toString()
+      );
+
+      await User.findByIdAndUpdate(userId, { carts: updatedUserCarts });
+
+      return deletedCart;
+    },
   },
   Date: GraphQLDateTime,
 };
 
 export const typeDefs = gql`
   type Query {
-    me: User!
+    login: User!
     user(id: ID!): User!
     users: [User]!
     product(id: ID!): Product
