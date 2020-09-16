@@ -8,23 +8,7 @@ import jwt from "jsonwebtoken";
 
 export const resolvers = {
   Query: {
-    login: async (parent, args, context, info) => {
-      const { email, password } = args;
-
-      const user = await User.findOne({ email });
-
-      if (!user) throw new Error("Email not found, please sign up,");
-
-      const validPassword = await bcrypt.compare(password, user.password);
-
-      if (!validPassword) throw new Error("Invalid email or password.");
-
-      const token = jwt.sign({ userId: user.id }, process.env.SECRET, {
-        expiresIn: "7days",
-      });
-
-      return { userId: user.id, jwt: token };
-    },
+    
     user: (parent, args, { userId }, info) => {
       if (!userId) throw new Error("Please log in");
 
@@ -55,7 +39,7 @@ export const resolvers = {
       Product.find().populate({
         path: "user",
         populate: { path: "createdProducts" },
-      }),
+      }).sort({createdAt: 'desc'}),
   },
   Mutation: {
     signup: async (parent, args, context, info) => {
@@ -81,6 +65,27 @@ export const resolvers = {
       //end check password
 
       return User.create({ ...args, email, password });
+    },
+    login: async (parent, args, context, info) => {
+      const { email, password } = args;
+
+      const user = await User.findOne({ email }).populate({
+        path: "createdProducts",
+        populate: { path: "user" },
+      })
+      .populate({ path: "carts", populate: { path: "product" } })
+
+      if (!user) throw new Error("Email not found, please sign up,");
+
+      const validPassword = await bcrypt.compare(password, user.password);
+
+      if (!validPassword) throw new Error("Invalid email or password.");
+
+      const token = jwt.sign({ userId: user.id }, process.env.SECRET, {
+        expiresIn: "7days",
+      });
+
+      return { user, jwt: token };
     },
     createProduct: async (parent, args,  { userId }, info) => {
 
@@ -226,7 +231,7 @@ export const resolvers = {
 
 export const typeDefs = gql`
   type Query {
-    login(email: String!, password: String!): AuthData
+    
     user(id: ID!): User!
     users: [User]!
     product(id: ID!): Product
@@ -235,6 +240,7 @@ export const typeDefs = gql`
 
   type Mutation {
     signup(name: String!, email: String!, password: String!): User
+    login(email: String!, password: String!): AuthData
     createProduct(
       description: String!
       price: Float!
@@ -280,7 +286,7 @@ export const typeDefs = gql`
   }
 
   type AuthData {
-    userId: ID
+    user: User
     jwt: String
   }
 `;

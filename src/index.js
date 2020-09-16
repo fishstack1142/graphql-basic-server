@@ -14,7 +14,7 @@ const server = new ApolloServer({
   //this is where we pass from apollo to context of each function resolvers
   context: ({ req }) => {
     const token = req.headers.authorization || ""
-    
+
     console.log(token)
 
     const userId = getUser(token)
@@ -23,7 +23,7 @@ const server = new ApolloServer({
   }
 });
 
-const PORT = process.env.PORT;
+const PORT = process.env.PORT || 8080;
 
 const getUser = token => {
   if (!token) return null
