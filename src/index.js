@@ -15,9 +15,11 @@ const server = new ApolloServer({
   context: ({ req }) => {
     const token = req.headers.authorization || ""
 
-    console.log(token)
+    // console.log(token)
 
     const userId = getUser(token)
+
+    //  console.log(userId)
 
     return { userId }
   }

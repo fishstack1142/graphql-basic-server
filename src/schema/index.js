@@ -12,9 +12,9 @@ export const resolvers = {
     user: (parent, args, { userId }, info) => {
       if (!userId) throw new Error("Please log in");
 
-      if (userId !== args.id) throw new Error("Not authorized.");
+      // if (userId !== args.id) throw new Error("Not authorized.");
 
-      return User.findById(args.id)
+      return User.findById(userId)
         .populate({
           path: "createdProducts",
           populate: { path: "user" },
@@ -232,7 +232,7 @@ export const resolvers = {
 export const typeDefs = gql`
   type Query {
     
-    user(id: ID!): User!
+    user: User
     users: [User]!
     product(id: ID!): Product
     products: [Product]!
