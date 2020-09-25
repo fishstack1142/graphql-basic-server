@@ -5,10 +5,12 @@ import Product from "../models/product";
 import { GraphQLDateTime } from "graphql-iso-date";
 import CartItem from "../models/cartItem";
 import jwt from "jsonwebtoken";
+// import { randomBytes } from crypto;
+
+const crypto = require("crypto");
 
 export const resolvers = {
   Query: {
-    
     user: (parent, args, { userId }, info) => {
       if (!userId) throw new Error("Please log in");
 
@@ -36,10 +38,12 @@ export const resolvers = {
         populate: { path: "products" },
       }),
     products: (parent, args, context, info) =>
-      Product.find().populate({
-        path: "user",
-        populate: { path: "createdProducts" },
-      }).sort({createdAt: 'desc'}),
+      Product.find()
+        .populate({
+          path: "user",
+          populate: { path: "createdProducts" },
+        })
+        .sort({ createdAt: "desc" }),
   },
   Mutation: {
     signup: async (parent, args, context, info) => {
@@ -69,11 +73,12 @@ export const resolvers = {
     login: async (parent, args, context, info) => {
       const { email, password } = args;
 
-      const user = await User.findOne({ email }).populate({
-        path: "createdProducts",
-        populate: { path: "user" },
-      })
-      .populate({ path: "carts", populate: { path: "product" } })
+      const user = await User.findOne({ email })
+        .populate({
+          path: "createdProducts",
+          populate: { path: "user" },
+        })
+        .populate({ path: "carts", populate: { path: "product" } });
 
       if (!user) throw new Error("Email not found, please sign up,");
 
@@ -87,9 +92,27 @@ export const resolvers = {
 
       return { user, jwt: token };
     },
-    createProduct: async (parent, args,  { userId }, info) => {
+    requestResetPassword: async (parent, args, context, info) => {
+      const { email } = args;
 
-      if (!userId) throw new Error('Please log in.')
+      console.log(args.email);
+
+      const user = await User.findOne({email});
+
+      if (!user) throw new Error("Email not found, ");
+
+      const resetPasswordToken = crypto.randomBytes(32).toString("hex");
+      const resetTokenExpiry = Date.now() + 30 * 60 * 10;
+
+      await User.findByIdAndUpdate(user.id, {
+        resetPasswordToken,
+        resetTokenExpiry,
+      });
+
+      return { message: "Please check your email" };
+    },
+    createProduct: async (parent, args, { userId }, info) => {
+      if (!userId) throw new Error("Please log in.");
 
       if (!args.description || !args.price || !args.imageUrl) {
         throw new Error("Please provide all required fields.");
@@ -117,7 +140,7 @@ export const resolvers = {
     updateProduct: async (parent, args, { userId }, info) => {
       const { id, description, price, imageUrl } = args;
 
-      if(!userId) throw new Error('Please log in.')
+      if (!userId) throw new Error("Please log in.");
 
       if (!userId) throw new Error("Please log in.");
 
@@ -146,7 +169,7 @@ export const resolvers = {
     addToCart: async (parent, args, { userId }, info) => {
       const { id } = args;
 
-      if (!userId) throw new Error('Please log in.')
+      if (!userId) throw new Error("Please log in.");
 
       try {
         const user = await User.findById(userId).populate({
@@ -199,14 +222,14 @@ export const resolvers = {
         console.log(error);
       }
     },
-    deleteCart: async (parent, args,  { userId }, info) => {
+    deleteCart: async (parent, args, { userId }, info) => {
       const { id } = args;
 
       if (!userId) throw new Error("Please log in.");
 
       const cart = await CartItem.findById(id);
 
-      console.log(cart)
+      console.log(cart);
 
       const user = await User.findById(userId);
 
@@ -231,7 +254,6 @@ export const resolvers = {
 
 export const typeDefs = gql`
   type Query {
-    
     user: User
     users: [User]!
     product(id: ID!): Product
@@ -241,6 +263,7 @@ export const typeDefs = gql`
   type Mutation {
     signup(name: String!, email: String!, password: String!): User
     login(email: String!, password: String!): AuthData
+    requestResetPassword(email: String!): Message!
     createProduct(
       description: String!
       price: Float!
@@ -262,7 +285,6 @@ export const typeDefs = gql`
     id: ID!
     name: String!
     email: String!
-    password: String!
     createdProducts: [Product]
     carts: [CartItem]!
     createdAt: Date!
@@ -288,5 +310,9 @@ export const typeDefs = gql`
   type AuthData {
     user: User
     jwt: String
+  }
+
+  type Message {
+    message: String!
   }
 `;

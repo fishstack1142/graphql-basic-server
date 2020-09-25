@@ -16,6 +16,12 @@ const userSchema = new mongoose.Schema({
     required: true,
     trim: true,
   },
+  resetPasswordToken: {
+    type: String,
+  },
+  resetTokenExpiry: {
+    type: Number
+  },
   createdProducts: [
     {
       type: mongoose.Schema.Types.ObjectId,
@@ -23,10 +29,10 @@ const userSchema = new mongoose.Schema({
     },
   ],
   carts: [
-      {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: 'CartItem'
-      }
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "CartItem",
+    },
   ],
   createdAt: {
     type: Date,
