@@ -4,13 +4,15 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "nodemon -r esm src/index.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node -r esm src/index.js",
+    "test": "node -r esm src/index.js",
+    "dev": "node -r esm -r dotenv/config src/index.js dotenv_config_path=config/env/.env"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@sendgrid/mail": "^7.2.6",
     "apollo-server-express": "^2.17.0",
     "bcryptjs": "^2.4.3",
     "dotenv": "^8.2.0",

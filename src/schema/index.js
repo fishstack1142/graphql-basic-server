@@ -8,6 +8,7 @@ import jwt from "jsonwebtoken";
 // import { randomBytes } from crypto;
 
 const crypto = require("crypto");
+const sgMail = require("@sendgrid/mail");
 
 export const resolvers = {
   Query: {
@@ -97,17 +98,39 @@ export const resolvers = {
 
       console.log(args.email);
 
-      const user = await User.findOne({email});
+      const user = await User.findOne({ email });
 
       if (!user) throw new Error("Email not found, ");
 
       const resetPasswordToken = crypto.randomBytes(32).toString("hex");
-      const resetTokenExpiry = Date.now() + 30 * 60 * 10;
+      const resetTokenExpiry = Date.now() + 30 * 60 * 1000;
 
       await User.findByIdAndUpdate(user.id, {
         resetPasswordToken,
         resetTokenExpiry,
       });
+
+      sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+      const msg = {
+        to: user.email,
+        from: `${process.env.SENDGRID_EMAIL}`,
+        subject: "Reset password as you requested",
+        html: `<div>
+              <p>check the link below</p>\n\n
+              <a href='${process.env.SENDGRID_RESET_URL}?token=${resetPasswordToken}' target='blank'>click here</a>
+        </div>`,
+      };
+
+      sgMail.send(msg).then(
+        () => {},
+        error => {
+          console.error(error);
+
+          if (error.response) {
+            console.error(error.response.body);
+          }
+        }
+      );
 
       return { message: "Please check your email" };
     },
