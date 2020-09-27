@@ -134,6 +134,27 @@ export const resolvers = {
 
       return { message: "Please check your email" };
     },
+    resetPassword: async (parent, {password, token}, context, info) => {
+
+      const user = await User.findOne({ resetPasswordToken: token })
+
+      if (!user) throw new Error('Invalid token, cannot reset password')
+
+      const checkTokenExpiry = user.resetTokenExpiry < Date.now()
+
+      if (checkTokenExpiry) throw new Error('Token is expired')
+
+      const hashedPassword = await bcrypt.hash(password, 10)
+
+      await User.findByIdAndUpdate(user.id, {
+        password: hashedPassword,
+        resetPasswordToken: null,
+        resetTokenExpiry: null
+      })
+
+      return {message: 'Successfully reset the password'}
+    }
+    ,
     createProduct: async (parent, args, { userId }, info) => {
       if (!userId) throw new Error("Please log in.");
 
@@ -287,6 +308,7 @@ export const typeDefs = gql`
     signup(name: String!, email: String!, password: String!): User
     login(email: String!, password: String!): AuthData
     requestResetPassword(email: String!): Message!
+    resetPassword(password: String!, token: String!): Message
     createProduct(
       description: String!
       price: Float!
